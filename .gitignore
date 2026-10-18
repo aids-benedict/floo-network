@@ -1,0 +1,10 @@
+hearths/
+floo_powder.toml
+*floo-backup*.zip
+__pycache__/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+*.db
+usage.csv

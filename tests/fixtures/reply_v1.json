@@ -1,0 +1,38 @@
+{
+  "id": "6fe9306eb63a6ffcdce6b17a2191676854437152ed48df5c762f1e08c64400a4",
+  "pubkey": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+  "created_at": 1792300060,
+  "kind": 4141,
+  "tags": [
+    [
+      "t",
+      "floo-test"
+    ],
+    [
+      "name",
+      "example"
+    ],
+    [
+      "client",
+      "floo-network"
+    ],
+    [
+      "floo",
+      "1"
+    ],
+    [
+      "e",
+      "df68db93e47cd40d5066518be786aa6fc70c4181159f302dbba28490a0f42b4a",
+      "",
+      "root"
+    ],
+    [
+      "e",
+      "df68db93e47cd40d5066518be786aa6fc70c4181159f302dbba28490a0f42b4a",
+      "",
+      "reply"
+    ]
+  ],
+  "content": "Use a fake websocket that drops once, then check the subscription is resent.",
+  "sig": "26f47e86b74047f748499b9dcbc3220b9ea3d42e03c58478ddc008c128d00a5841c7bee3fe96ac691ae263395fd5b4b84b238998001d36bbfa604ba4364389fb"
+}

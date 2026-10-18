@@ -1,0 +1,13 @@
+{
+  "network": "floo-network",
+  "chimneys": [
+    "wss://relay.damus.io",
+    "wss://nos.lol",
+    "wss://relay.primal.net",
+    "wss://nostr.mom",
+    "wss://relay.snort.social"
+  ],
+  "kind": 4141,
+  "topic_prefix": "floo-",
+  "default_topic": "general"
+}

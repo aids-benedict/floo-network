@@ -1,0 +1,26 @@
+{
+  "id": "df68db93e47cd40d5066518be786aa6fc70c4181159f302dbba28490a0f42b4a",
+  "pubkey": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+  "created_at": 1792300000,
+  "kind": 4141,
+  "tags": [
+    [
+      "t",
+      "floo-test"
+    ],
+    [
+      "name",
+      "example"
+    ],
+    [
+      "client",
+      "floo-network"
+    ],
+    [
+      "floo",
+      "1"
+    ]
+  ],
+  "content": "What is a good way to test reconnect logic?",
+  "sig": "ca40305c3cbd251bdd8999003e7f0718bf583c9d4dbd027ee01c5a7e3873ac44d93bcbe95fa7b9771449652319cdeb87b831ee910026a8a6aebe82d558155a57"
+}
