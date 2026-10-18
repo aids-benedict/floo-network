@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="70" viewBox="0 0 1280 70" role="img" aria-label="A parchment strip with footsteps walking from one hearth to another">
+  <defs>
+    <linearGradient id="parch" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#efe0b4"/>
+      <stop offset="0.5" stop-color="#e6d29c"/>
+      <stop offset="1" stop-color="#d8bf80"/>
+    </linearGradient>
+    <radialGradient id="age" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.6" stop-color="#7a5a2a" stop-opacity="0"/>
+      <stop offset="1" stop-color="#7a5a2a" stop-opacity="0.35"/>
+    </radialGradient>
+    <!-- one footprint: sole + heel -->
+    <g id="foot">
+      <ellipse cx="0" cy="-5" rx="4.2" ry="6.5"/>
+      <ellipse cx="0" cy="6" rx="3.2" ry="3.6"/>
+    </g>
+  </defs>
+
+  <style>
+    .step { opacity: 0; animation: walk 8s linear infinite; }
+    @keyframes walk {
+      0%   { opacity: 0; }
+      3%   { opacity: 0.9; }
+      30%  { opacity: 0.9; }
+      45%  { opacity: 0; }
+      100% { opacity: 0; }
+    }
+  </style>
+
+  <!-- torn-edge parchment strip -->
+  <path d="M8 14 L60 10 L120 15 L190 9 L260 14 L340 10 L420 15 L500 9 L590 14 L680 10 L770 15 L860 9 L950 14 L1040 10 L1130 15 L1210 10 L1272 14
+           L1268 56 L1200 61 L1120 55 L1030 61 L940 56 L850 61 L760 55 L670 61 L580 56 L490 61 L400 55 L310 61 L220 56 L130 61 L60 55 L12 60 Z"
+        fill="url(#parch)"/>
+  <path d="M8 14 L60 10 L120 15 L190 9 L260 14 L340 10 L420 15 L500 9 L590 14 L680 10 L770 15 L860 9 L950 14 L1040 10 L1130 15 L1210 10 L1272 14
+           L1268 56 L1200 61 L1120 55 L1030 61 L940 56 L850 61 L760 55 L670 61 L580 56 L490 61 L400 55 L310 61 L220 56 L130 61 L60 55 L12 60 Z"
+        fill="url(#age)"/>
+
+  <!-- labels, map-style -->
+  <g font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="14" fill="#5a3e1b">
+    <text x="40" y="40">alice's hearth</text>
+    <text x="1240" y="40" text-anchor="end">bob's hearth</text>
+  </g>
+  <!-- faint dotted trail -->
+  <path d="M150 36 H1130" stroke="#5a3e1b" stroke-opacity="0.25" stroke-width="1.5" stroke-dasharray="2 9"/>
+
+  <!-- footsteps, appearing one after another -->
+  <g fill="#4a3216">
+    <use href="#foot" class="step" transform="translate(170 30) rotate(90)" style="animation-delay: 0s"/>
+    <use href="#foot" class="step" transform="translate(230 42) rotate(90)" style="animation-delay: 0.25s"/>
+    <use href="#foot" class="step" transform="translate(290 30) rotate(90)" style="animation-delay: 0.5s"/>
+    <use href="#foot" class="step" transform="translate(350 42) rotate(90)" style="animation-delay: 0.75s"/>
+    <use href="#foot" class="step" transform="translate(410 30) rotate(90)" style="animation-delay: 1s"/>
+    <use href="#foot" class="step" transform="translate(470 42) rotate(90)" style="animation-delay: 1.25s"/>
+    <use href="#foot" class="step" transform="translate(530 30) rotate(90)" style="animation-delay: 1.5s"/>
+    <use href="#foot" class="step" transform="translate(590 42) rotate(90)" style="animation-delay: 1.75s"/>
+    <use href="#foot" class="step" transform="translate(650 30) rotate(90)" style="animation-delay: 2s"/>
+    <use href="#foot" class="step" transform="translate(710 42) rotate(90)" style="animation-delay: 2.25s"/>
+    <use href="#foot" class="step" transform="translate(770 30) rotate(90)" style="animation-delay: 2.5s"/>
+    <use href="#foot" class="step" transform="translate(830 42) rotate(90)" style="animation-delay: 2.75s"/>
+    <use href="#foot" class="step" transform="translate(890 30) rotate(90)" style="animation-delay: 3s"/>
+    <use href="#foot" class="step" transform="translate(950 42) rotate(90)" style="animation-delay: 3.25s"/>
+    <use href="#foot" class="step" transform="translate(1010 30) rotate(90)" style="animation-delay: 3.5s"/>
+    <use href="#foot" class="step" transform="translate(1070 42) rotate(90)" style="animation-delay: 3.75s"/>
+    <use href="#foot" class="step" transform="translate(1110 30) rotate(90)" style="animation-delay: 4s"/>
+  </g>
+</svg>
