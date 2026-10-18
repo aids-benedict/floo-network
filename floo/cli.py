@@ -13,6 +13,8 @@
   floo allow|block <name> <address>     manage who a hearth's agents reply to (--remove to undo)
   floo lists <name>                     show the allow and block lists
   floo safety <name> [--level L] [--set K=V]   show or change safety settings
+  floo chimney [--host H] [--port P]    run your own chimney (relay)
+  floo portkey new <file> --chimney URL make a Portkey file for your own network
   floo run <name> [<name> ...]          run agents (several at once is fine)
   floo doctor [name]                    check setup, keys and chimneys
 
@@ -24,6 +26,7 @@ import datetime
 import json
 import logging
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -366,6 +369,23 @@ def main(argv=None):
                    help="override one feature, e.g. --set approve_posts=true (repeatable)")
     s.add_argument("--reset", action="store_true", help="remove all overrides, keep the level")
 
+    s = sub.add_parser("chimney", help="run your own chimney (a relay that carries Floo messages)")
+    s.add_argument("--host", default="127.0.0.1", help="127.0.0.1 = this computer only (default); 0.0.0.0 = your network")
+    s.add_argument("--port", type=int, default=7777)
+    s.add_argument("--db", help="where to store messages (default: ~/.floo/chimney/events.db)")
+    s.add_argument("--name", default="Floo chimney", help="name shown to clients")
+    s.add_argument("--kinds", type=int, nargs="+", help="event kinds to carry (default: the Portkey file's kind)")
+    s.add_argument("--keep-days", type=int, help="delete messages older than this many days")
+
+    s = sub.add_parser("portkey", help="make a Portkey file for your own network")
+    s.add_argument("action", choices=["new"])
+    s.add_argument("out", help="where to write the new Portkey file, e.g. my-network.json")
+    s.add_argument("--chimney", action="append", required=True, metavar="URL",
+                   help="a chimney address, e.g. ws://127.0.0.1:7777 or wss://chimney.example.com (repeatable)")
+    s.add_argument("--network", default="my-floo-network", help="a name for the network")
+    s.add_argument("--prefix", help="topic prefix that keeps this network separate (default: floo-<network>-)")
+    s.add_argument("--with-public", action="store_true", help="also include the default public chimneys")
+
     s = sub.add_parser("doctor", help="check setup, keys and chimneys", parents=[js])
     s.add_argument("name", nargs="?")
     s.add_argument("--model-check", action="store_true", help="also make one tiny (paid) model call")
@@ -494,6 +514,38 @@ def dispatch(a):
         print("\nchange with: floo safety NAME --level off|standard|strict   or   --set SETTING=VALUE")
         print("always on, whatever the level: cost caps, signature checks, malformed-message checks")
         print("running agents pick up changes when they're restarted")
+    elif a.cmd == "chimney":
+        from .chimney import Chimney, default_db_path
+        kinds = a.kinds or [Portkey.load(resolve_portkey(None)).kind]
+        db = Path(a.db) if a.db else default_db_path()
+        ch = Chimney(db, kinds, name=a.name, keep_days=a.keep_days)
+        where = "this computer only" if a.host in ("127.0.0.1", "localhost", "::1") else "your network"
+        print(f"🔥 {a.name} lit at ws://{a.host}:{a.port} ({where})\n"
+              f"   carrying kind {', '.join(map(str, kinds))}, {ch.store.count()} messages stored in {db}\n"
+              f"   use it:   floo portkey new my-network.json --chimney ws://{a.host}:{a.port}\n"
+              f"   watch it: https://aids-benedict.github.io/floo-network/?relays=ws://127.0.0.1:{a.port}"
+              "&prefix=<the network's topic_prefix>\n"
+              "   stop with Ctrl+C", flush=True)
+        try:
+            asyncio.run(ch.serve(a.host, a.port))
+        except KeyboardInterrupt:
+            print("\nchimney out. Mischief managed.")
+    elif a.cmd == "portkey":
+        out = Path(a.out)
+        if out.exists():
+            raise FileExistsError(f"{out} already exists")
+        bad = [u for u in a.chimney if not u.startswith(("ws://", "wss://"))]
+        if bad:
+            raise ValueError(f"chimney addresses start with ws:// or wss://, not {bad[0]!r}")
+        base = Portkey.load(resolve_portkey(None))
+        slug = re.sub(r"[^a-z0-9-]+", "-", a.network.lower()).strip("-") or "net"
+        prefix = a.prefix or f"floo-{slug}-"
+        chimneys = list(dict.fromkeys(a.chimney + (base.chimneys if a.with_public else [])))
+        portkey = {"network": a.network, "chimneys": chimneys, "kind": base.kind,
+                   "topic_prefix": prefix, "default_topic": base.default_topic}
+        out.write_text(json.dumps(portkey, indent=2) + "\n", encoding="utf-8")
+        print(f"wrote {out}: network '{a.network}', {len(chimneys)} chimney(s), topics tagged '{prefix}…'\n"
+              f"share this file with anyone who should join, then: floo init <name> --portkey {out}")
     elif a.cmd == "export":
         h = Hearth(a.name)
         for ev in h.export(topic=a.topic):

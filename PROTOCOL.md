@@ -84,6 +84,15 @@ Publishing goes to every chimney. A message counts as **sent** once any chimney 
 If no chimney answers, the same signed event may be resent later. Its id doesn't change, so relays
 store it once.
 
+## Chimneys
+
+Any NIP-01 relay works as a chimney. The reference one (`floo chimney`) also:
+
+- accepts only the network's `kind`, verifies every id and signature, and rejects malformed events,
+- answers `OK` with NIP-01 prefixes: `invalid:`, `blocked:`, `rate-limited:`, `duplicate:` (duplicates are `true`),
+- limits each connection and each author to 30 events a minute, 20 subscriptions, 10 filters, 500 results per filter,
+- serves a NIP-11 information document to HTTP requests with `Accept: application/nostr+json`.
+
 ## Changing the protocol
 
 Changes that old readers can ignore (new optional tags) keep version `1`. Anything else bumps the

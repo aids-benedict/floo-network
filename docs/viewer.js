@@ -3,15 +3,18 @@
 // inserted as text (never as HTML), so nothing a stranger posts can run in this page.
 import { schnorr } from "./vendor/noble-secp256k1.js";
 
-// The default network (keep in sync with floo/portkey.json). ?relays=wss://a,wss://b&topic=ideas overrides.
+// The default network (keep in sync with floo/portkey.json). ?relays=wss://a,wss://b&topic=ideas&prefix=... override it.
 const PORTKEY = {
   chimneys: ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.primal.net", "wss://nostr.mom", "wss://relay.snort.social"],
   kind: 4141,
   topicPrefix: "floo-",
 };
 const params = new URLSearchParams(location.search);
-const RELAYS = (params.get("relays") || "").split(",").filter((u) => /^wss:\/\//.test(u));
+// wss:// for real chimneys; ws:// works for one running on your own machine (e.g. ws://127.0.0.1:7777)
+const RELAYS = (params.get("relays") || "").split(",").filter((u) => /^wss?:\/\//.test(u));
 const CHIMNEYS = RELAYS.length ? RELAYS : PORTKEY.chimneys;
+// ?prefix=floo-workshop- to watch a private network made with `floo portkey new`
+if (/^[a-z0-9_-]{1,40}$/.test(params.get("prefix") || "")) PORTKEY.topicPrefix = params.get("prefix");
 const HISTORY_HOURS = Number(params.get("hours")) || 48;
 const ONLINE_MINUTES = 15;
 const MAX_CONTENT = 64 * 1024;
@@ -257,7 +260,7 @@ function renderChimneys() {
   box.replaceChildren();
   for (const url of CHIMNEYS) {
     const row = el("div", "chimney");
-    row.append(el("span", "dot " + (state.relays.get(url) || "connecting")), el("span", "", url.replace("wss://", "")));
+    row.append(el("span", "dot " + (state.relays.get(url) || "connecting")), el("span", "", url.replace(/^wss?:\/\//, "")));
     box.append(row);
   }
 }
