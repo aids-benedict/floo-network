@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="70" viewBox="0 0 1280 70" role="img" aria-label="A parchment strip with footsteps walking from one hearth to another">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="70" viewBox="0 0 1280 70" role="img" aria-label="A parchment strip with footsteps walking across it">
   <defs>
     <linearGradient id="parch" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#efe0b4"/>
@@ -35,32 +35,30 @@
            L1268 56 L1200 61 L1120 55 L1030 61 L940 56 L850 61 L760 55 L670 61 L580 56 L490 61 L400 55 L310 61 L220 56 L130 61 L60 55 L12 60 Z"
         fill="url(#age)"/>
 
-  <!-- labels, map-style -->
-  <g font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="14" fill="#5a3e1b">
-    <text x="40" y="40">alice's hearth</text>
-    <text x="1240" y="40" text-anchor="end">bob's hearth</text>
-  </g>
   <!-- faint dotted trail -->
-  <path d="M150 36 H1130" stroke="#5a3e1b" stroke-opacity="0.25" stroke-width="1.5" stroke-dasharray="2 9"/>
+  <path d="M40 36 H1240" stroke="#5a3e1b" stroke-opacity="0.25" stroke-width="1.5" stroke-dasharray="2 9"/>
 
   <!-- footsteps, appearing one after another -->
   <g fill="#4a3216">
-    <use href="#foot" class="step" transform="translate(170 30) rotate(90)" style="animation-delay: 0s"/>
-    <use href="#foot" class="step" transform="translate(230 42) rotate(90)" style="animation-delay: 0.25s"/>
-    <use href="#foot" class="step" transform="translate(290 30) rotate(90)" style="animation-delay: 0.5s"/>
-    <use href="#foot" class="step" transform="translate(350 42) rotate(90)" style="animation-delay: 0.75s"/>
-    <use href="#foot" class="step" transform="translate(410 30) rotate(90)" style="animation-delay: 1s"/>
-    <use href="#foot" class="step" transform="translate(470 42) rotate(90)" style="animation-delay: 1.25s"/>
-    <use href="#foot" class="step" transform="translate(530 30) rotate(90)" style="animation-delay: 1.5s"/>
-    <use href="#foot" class="step" transform="translate(590 42) rotate(90)" style="animation-delay: 1.75s"/>
-    <use href="#foot" class="step" transform="translate(650 30) rotate(90)" style="animation-delay: 2s"/>
-    <use href="#foot" class="step" transform="translate(710 42) rotate(90)" style="animation-delay: 2.25s"/>
-    <use href="#foot" class="step" transform="translate(770 30) rotate(90)" style="animation-delay: 2.5s"/>
-    <use href="#foot" class="step" transform="translate(830 42) rotate(90)" style="animation-delay: 2.75s"/>
-    <use href="#foot" class="step" transform="translate(890 30) rotate(90)" style="animation-delay: 3s"/>
-    <use href="#foot" class="step" transform="translate(950 42) rotate(90)" style="animation-delay: 3.25s"/>
-    <use href="#foot" class="step" transform="translate(1010 30) rotate(90)" style="animation-delay: 3.5s"/>
-    <use href="#foot" class="step" transform="translate(1070 42) rotate(90)" style="animation-delay: 3.75s"/>
-    <use href="#foot" class="step" transform="translate(1110 30) rotate(90)" style="animation-delay: 4s"/>
+    <use href="#foot" class="step" transform="translate(60 30) rotate(90)" style="animation-delay: 0.0s"/>
+    <use href="#foot" class="step" transform="translate(120 42) rotate(90)" style="animation-delay: 0.2s"/>
+    <use href="#foot" class="step" transform="translate(180 30) rotate(90)" style="animation-delay: 0.4s"/>
+    <use href="#foot" class="step" transform="translate(240 42) rotate(90)" style="animation-delay: 0.6s"/>
+    <use href="#foot" class="step" transform="translate(300 30) rotate(90)" style="animation-delay: 0.8s"/>
+    <use href="#foot" class="step" transform="translate(360 42) rotate(90)" style="animation-delay: 1.0s"/>
+    <use href="#foot" class="step" transform="translate(420 30) rotate(90)" style="animation-delay: 1.2s"/>
+    <use href="#foot" class="step" transform="translate(480 42) rotate(90)" style="animation-delay: 1.4s"/>
+    <use href="#foot" class="step" transform="translate(540 30) rotate(90)" style="animation-delay: 1.6s"/>
+    <use href="#foot" class="step" transform="translate(600 42) rotate(90)" style="animation-delay: 1.8s"/>
+    <use href="#foot" class="step" transform="translate(660 30) rotate(90)" style="animation-delay: 2.0s"/>
+    <use href="#foot" class="step" transform="translate(720 42) rotate(90)" style="animation-delay: 2.2s"/>
+    <use href="#foot" class="step" transform="translate(780 30) rotate(90)" style="animation-delay: 2.4s"/>
+    <use href="#foot" class="step" transform="translate(840 42) rotate(90)" style="animation-delay: 2.6s"/>
+    <use href="#foot" class="step" transform="translate(900 30) rotate(90)" style="animation-delay: 2.8s"/>
+    <use href="#foot" class="step" transform="translate(960 42) rotate(90)" style="animation-delay: 3.0s"/>
+    <use href="#foot" class="step" transform="translate(1020 30) rotate(90)" style="animation-delay: 3.2s"/>
+    <use href="#foot" class="step" transform="translate(1080 42) rotate(90)" style="animation-delay: 3.4s"/>
+    <use href="#foot" class="step" transform="translate(1140 30) rotate(90)" style="animation-delay: 3.6s"/>
+    <use href="#foot" class="step" transform="translate(1200 42) rotate(90)" style="animation-delay: 3.8s"/>
   </g>
 </svg>
