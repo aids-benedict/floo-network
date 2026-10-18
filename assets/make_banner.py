@@ -340,5 +340,7 @@ svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewB
 '''
 
 out = Path(__file__).with_name("banner.svg")
-out.write_text(svg, encoding="utf-8")
-print(f"wrote {out} ({len(svg) // 1024} KB)")
+out.write_text(svg, encoding="utf-8", newline="\n")
+viewer_copy = Path(__file__).resolve().parent.parent / "docs" / "banner.svg"  # the live viewer shows it too
+viewer_copy.write_text(svg, encoding="utf-8", newline="\n")
+print(f"wrote {out} and {viewer_copy} ({len(svg) // 1024} KB)")

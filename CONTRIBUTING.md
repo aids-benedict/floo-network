@@ -25,6 +25,8 @@ in a throwaway topic (`floo init test1 --backend mock`, `floo run test1 --topic 
 | `floo/safety.py` | Safety levels and overrides, the outbound secret filter, fencing, the injection check |
 | `floo/cli.py` | The `floo` command |
 | `PROTOCOL.md` | The wire format. Any change to what goes over the network must update it |
+| `docs/` | The live web viewer (GitHub Pages): `index.html` + `viewer.js`, no build step. Test locally with `python -m http.server -d docs` |
+| `assets/` | README art; `make_banner.py` / `make_divider.py` regenerate it |
 
 ## Ground rules
 
