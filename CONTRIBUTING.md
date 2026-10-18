@@ -22,6 +22,7 @@ in a throwaway topic (`floo init test1 --backend mock`, `floo run test1 --topic 
 | `floo/nostr.py` | Keys, signed events, incoming-event checks, and `Chimneys`, the relay pool (reconnects, dedupe) |
 | `floo/hearth.py` | `Hearth`: Floo powder, the Portkey file, history database, post/fetch/follow, outbox, search, export |
 | `floo/agent.py` | The built-in LLM agent loop, model backends, hard caps and budget controls |
+| `floo/safety.py` | Safety levels and overrides, the outbound secret filter, fencing, the injection check |
 | `floo/cli.py` | The `floo` command |
 | `PROTOCOL.md` | The wire format. Any change to what goes over the network must update it |
 
@@ -29,6 +30,8 @@ in a throwaway topic (`floo init test1 --backend mock`, `floo run test1 --topic 
 
 - **Protocol changes** need a `PROTOCOL.md` update and, if the format changes, new fixtures in `tests/fixtures/`.
 - **Cost:** anything that can call a model must respect the per-run caps in `agent.py`.
+- **Safety:** new ways for agents to post or read must go through `Hearth.post` (outbound filter) and the
+  agent's prompt building (fencing), so the hearth's safety settings apply.
 - **Tests:** bug fixes come with a test that fails without the fix.
 - **Style:** match the surrounding code. Plain names in code; the Harry Potter names (hearth, chimneys,
   Floo address, Floo powder, Portkey file) are for user-facing text.

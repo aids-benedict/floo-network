@@ -12,6 +12,7 @@
   floo backup <name> / floo restore <zip>   save or recreate a hearth (key, history, lists)
   floo allow|block <name> <address>     manage who a hearth's agents reply to (--remove to undo)
   floo lists <name>                     show the allow and block lists
+  floo safety <name> [--level L] [--set K=V]   show or change safety settings
   floo run <name> [<name> ...]          run agents (several at once is fine)
   floo doctor [name]                    check setup, keys and chimneys
 
@@ -27,15 +28,25 @@ import sys
 import time
 from pathlib import Path
 
-from . import nostr
-from .hearth import (DEFAULT_MODELS, FLOO_HOME, HEARTHS_DIR, Hearth, Portkey, backup_hearth, create_hearth,
-                     list_hearths, resolve_portkey, restore_hearth)
+from . import nostr, safety
+from .hearth import (DEFAULT_MODELS, FLOO_HOME, HEARTHS_DIR, Hearth, PostBlocked, Portkey, backup_hearth,
+                     create_hearth, list_hearths, reset_safety_overrides, resolve_portkey, restore_hearth,
+                     set_safety)
+
+SAFETY_HELP = {
+    "outbound_filter": "block posts that look like they contain secrets",
+    "fence_inbound": "show other agents' messages to the model as untrusted",
+    "injection_check": "off / warn / skip messages that look like prompt injection",
+    "approve_posts": "ask you before each agent post goes out",
+    "confirm_public": "floo run needs --yes (everything posted is public)",
+}
 
 
 def show(msg):
     when = datetime.datetime.fromtimestamp(msg["created_at"]).strftime("%H:%M")
-    who = f'{msg["name"]} ({nostr.short_address(msg["pubkey"])})'
-    print(f'{when}  #{msg["topic"]}  {who}\n    {msg["content"]}\n')
+    who = f'{safety.printable(msg["name"])} ({nostr.short_address(msg["pubkey"])})'
+    # escaped: a stranger's message must not be able to move the cursor or rewrite your screen
+    print(f'{when}  #{safety.printable(msg["topic"])}  {who}\n    {safety.printable(msg["content"])}\n')
 
 
 def out_json(obj):
@@ -61,7 +72,15 @@ async def opened(name):
 async def cmd_post(a):
     h = await opened(a.name)
     try:
-        msg, results = await h.post(a.topic, a.message, reply_to=a.reply_to)
+        try:
+            msg, results = await h.post(a.topic, a.message, reply_to=a.reply_to, force=a.force)
+        except PostBlocked as e:
+            sys.exit(f"floo: not posted, the safety filter thinks this contains: {e}\n"
+                     "      if you're sure it's fine, add --force")
+        if a.force and h.safety["outbound_filter"]:
+            reasons = safety.check_outbound(a.message, private_key=h.private_key)
+            if reasons:
+                print(f"warning: posted despite: {'; '.join(reasons)}")
         if a.json:
             return out_json({"message": with_address(msg),
                              "chimneys": {u: {"accepted": ok, "note": n} for u, (ok, n) in results.items()}})
@@ -69,7 +88,7 @@ async def cmd_post(a):
         print(f"posted to #{msg['topic']} via {len(ok)}/{len(results)} chimneys (id {msg['id'][:12]})")
         for u, (accepted, note) in results.items():
             if not accepted:
-                print(f"  {u}: {note}")
+                print(f"  {u}: {safety.printable(note)}")
     finally:
         await h.close()
 
@@ -139,13 +158,21 @@ async def cmd_retry(a):
         if not results:
             print("outbox is empty: everything was delivered")
         for ev, status, _ in results:
-            print(f"{ev['id'][:12]}  {status}  {ev['content'][:60]!r}")
+            print(f"{ev['id'][:12]}  {status}  {safety.printable(ev['content'][:60])!r}")
     finally:
         await h.close()
 
 
 async def cmd_run(a):
     from .agent import Agent
+    for n in a.names:  # check settings before connecting anywhere
+        s = Hearth(n)
+        s.db.close()
+        if s.safety["confirm_public"] and not a.yes:
+            sys.exit(f"floo: {n}'s safety settings ask you to confirm: everything agents post is public "
+                     "and permanent. Run again with --yes to go ahead.")
+        if s.safety["level"] != "off":
+            print(f"note: {n}'s posts are public. Safety level: {s.safety['level']} (floo safety {n} to change)")
     hearths = []
     try:
         for n in a.names:
@@ -279,6 +306,7 @@ def main(argv=None):
     s.add_argument("topic")
     s.add_argument("message")
     s.add_argument("--reply-to", help="id of the message you're replying to")
+    s.add_argument("--force", action="store_true", help="post even if the safety filter objects")
 
     s = sub.add_parser("read", help="read recent messages", parents=[js])
     s.add_argument("name")
@@ -329,6 +357,14 @@ def main(argv=None):
     s.add_argument("--topic")
     s.add_argument("--start", help="name of the agent that opens the conversation")
     s.add_argument("--minutes", type=float, default=10)
+    s.add_argument("--yes", action="store_true", help="confirm public posting (needed when confirm_public is on)")
+
+    s = sub.add_parser("safety", help="show or change a hearth's safety settings", parents=[js])
+    s.add_argument("name")
+    s.add_argument("--level", choices=list(safety.LEVELS), help="off, standard or strict")
+    s.add_argument("--set", metavar="SETTING=VALUE", action="append", default=[],
+                   help="override one feature, e.g. --set approve_posts=true (repeatable)")
+    s.add_argument("--reset", action="store_true", help="remove all overrides, keep the level")
 
     s = sub.add_parser("doctor", help="check setup, keys and chimneys", parents=[js])
     s.add_argument("name", nargs="?")
@@ -343,6 +379,8 @@ def main(argv=None):
         sys.exit(f"floo: {e}")
     except asyncio.TimeoutError:
         sys.exit("floo: timed out waiting for the chimneys")
+    except PostBlocked as e:
+        sys.exit(f"floo: not posted, the safety filter thinks this contains: {e}")
     except KeyboardInterrupt:
         sys.exit(130)
     sys.exit(code or 0)
@@ -420,6 +458,42 @@ def dispatch(a):
                 print(f"  {nostr.floo_address(p)}")
         if not h.lists["allowed"]:
             print("(no allowlist: agents may reply to anyone who isn't blocked)")
+    elif a.cmd == "safety":
+        changes = []  # parse and validate everything first, so a bad --set changes nothing
+        for item in a.set:
+            key, sep, value = item.partition("=")
+            if not sep:
+                raise ValueError(f"--set wants SETTING=VALUE, got {item!r}")
+            key = key.strip()
+            changes.append((key, safety.parse_value(key, value.strip())))
+        current = Hearth(a.name)
+        current.db.close()
+        proposed = {k: v for k, v in current.powder.get("safety", {}).items() if not a.reset or k == "level"}
+        if a.level:
+            proposed["level"] = a.level
+        proposed.update(changes)
+        safety.resolve(proposed)
+        if a.reset:
+            reset_safety_overrides(a.name)
+        if a.level:
+            set_safety(a.name, "level", a.level)
+        for key, value in changes:
+            set_safety(a.name, key, value)
+        h = Hearth(a.name)
+        h.db.close()
+        s = h.safety
+        if a.json:
+            return out_json(s)
+        base = safety.LEVELS[s["level"]]
+        print(f"{a.name}: safety level {s['level']}")
+        for key, explain in SAFETY_HELP.items():
+            value = s[key]
+            shown = value if isinstance(value, str) else ("on" if value else "off")
+            note = "" if value == base[key] else "   (override)"
+            print(f"  {key:16} {shown:5}  {explain}{note}")
+        print("\nchange with: floo safety NAME --level off|standard|strict   or   --set SETTING=VALUE")
+        print("always on, whatever the level: cost caps, signature checks, malformed-message checks")
+        print("running agents pick up changes when they're restarted")
     elif a.cmd == "export":
         h = Hearth(a.name)
         for ev in h.export(topic=a.topic):

@@ -17,7 +17,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import nostr
+from . import nostr, safety
 
 FLOO_HOME = Path(os.environ.get("FLOO_HOME") or Path.home() / ".floo")
 HEARTHS_DIR = FLOO_HOME / "hearths"
@@ -92,7 +92,12 @@ def create_hearth(name, persona="", backend="openai", model=None, portkey="defau
         "max_posts = 6             # hard cap per run\n"
         "min_seconds_between_posts = 20\n"
         'respond_to = "all"        # or "mentions": only reply when @named or replied to\n'
-        "max_replies_per_sender = 3   # per run, so one chatty sender can't use up the budget\n",
+        "max_replies_per_sender = 3   # per run, so one chatty sender can't use up the budget\n\n"
+        "[safety]\n"
+        f'level = "{safety.DEFAULT_LEVEL}"     # off | standard | strict  (see: floo safety {name})\n'
+        "# Any single feature can be set on its own and wins over the level, e.g.:\n"
+        "# approve_posts = true      # ask before each agent post goes out\n"
+        '# injection_check = "skip"  # off | warn | skip\n',
         encoding="utf-8")
     try:
         os.chmod(powder, 0o600)  # owner-only on Linux/macOS; no real effect on Windows
@@ -105,6 +110,87 @@ def list_hearths():
     if not HEARTHS_DIR.exists():
         return []
     return sorted(p.parent.name for p in HEARTHS_DIR.glob("*/floo_powder.toml"))
+
+
+_SAFETY_HEADER = re.compile(r"(?m)^[ \t]*\[[ \t]*safety[ \t]*\][ \t]*(#.*)?$")
+_NEXT_TABLE = re.compile(r"(?m)^[ \t]*\[")
+
+
+def _powder_for(name):
+    powder = HEARTHS_DIR / check_name(name) / "floo_powder.toml"
+    if not powder.exists():
+        raise FileNotFoundError(f"no hearth named '{name}'")
+    return powder
+
+
+def _safety_section(text):
+    """(start, end) of the body of the [safety] table, or None if there isn't one."""
+    header = _SAFETY_HEADER.search(text)
+    if not header:
+        return None
+    start = header.end()
+    nxt = _NEXT_TABLE.search(text, start)
+    return start, nxt.start() if nxt else len(text)
+
+
+def _write_powder_checked(powder, old_text, new_text, expected_safety):
+    """Write the edited Floo powder only if it parses, everything outside [safety] is unchanged, and
+    [safety] holds exactly what was intended. Otherwise leave the file alone. The write is atomic."""
+    try:
+        old, new = tomllib.loads(old_text), tomllib.loads(new_text)
+    except tomllib.TOMLDecodeError:
+        new = None
+    rest = lambda d: {k: v for k, v in d.items() if k != "safety"}
+    if new is None or rest(new) != rest(old) or new.get("safety", {}) != expected_safety:
+        raise ValueError(f"couldn't safely edit [safety] in {powder}; nothing was changed. "
+                         "Please edit that section by hand.")
+    tmp = powder.with_name(powder.name + ".tmp")
+    tmp.write_text(new_text, encoding="utf-8")
+    try:
+        os.chmod(tmp, 0o600)
+    except OSError:
+        pass
+    os.replace(tmp, powder)
+    return safety.resolve(expected_safety)
+
+
+def reset_safety_overrides(name):
+    """Remove every per-feature override from [safety], keeping the level."""
+    powder = _powder_for(name)
+    text = powder.read_text(encoding="utf-8")
+    current = tomllib.loads(text).get("safety", {})
+    bounds = _safety_section(text)
+    if not bounds or set(current) <= {"level"}:
+        return safety.resolve(current)
+    start, end = bounds
+    keys = "|".join(re.escape(k) for k in safety.LEVELS["standard"])
+    section = re.sub(rf'(?m)^[ \t]*"?({keys})"?[ \t]*=.*\n?', "", text[start:end])
+    expected = {k: v for k, v in current.items() if k == "level"}
+    return _write_powder_checked(powder, text, text[:start] + section + text[end:], expected)
+
+
+def set_safety(name, key, value):
+    """Set one [safety] value in a hearth's Floo powder, keeping the rest of the file as it is.
+    Returns the new effective settings. Raises ValueError (file untouched) if it can't do that safely."""
+    powder = _powder_for(name)
+    text = powder.read_text(encoding="utf-8")
+    current = tomllib.loads(text).get("safety", {})
+    expected = {**current, key: value}
+    safety.resolve(expected)  # validate the value before touching the file
+    line = f"{key} = {_toml_str(value) if isinstance(value, str) else str(value).lower()}"
+    bounds = _safety_section(text)
+    if not bounds:  # hearths made before safety existed
+        new_text = text.rstrip("\n") + f"\n\n[safety]\n{line}\n"
+    else:
+        start, end = bounds
+        section = text[start:end]
+        existing = re.search(rf'(?m)^[ \t]*"?{re.escape(key)}"?[ \t]*=.*$', section)
+        if existing:
+            section = section[:existing.start()] + line + section[existing.end():]
+        else:
+            section = "\n" + line + section
+        new_text = text[:start] + section + text[end:]
+    return _write_powder_checked(powder, text, new_text, expected)
 
 
 # ---------- backup / restore ----------
@@ -185,6 +271,13 @@ def parse_address(value):
 
 
 PROTOCOL_VERSION = "1"
+# invisible control and text-direction characters: always stripped from what's stored
+_CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f​-‏‪-‮⁦-⁩﻿]")
+_NAME_UNSAFE = re.compile(r"[\x00-\x1f\x7f-\x9f​-‏‪-‮⁦-⁩﻿<>\[\]]")
+
+
+class PostBlocked(Exception):
+    """The safety filter found something that looks like a secret in an outgoing message."""
 
 COLUMNS = ["id", "pubkey", "name", "topic", "content", "created_at", "reply_to", "mine",
            "root", "status", "raw"]
@@ -212,6 +305,7 @@ class Hearth:
         self.portkey = Portkey.load(resolve_portkey(self.powder.get("portkey")))
         self.topics = self.powder.get("topics") or [self.portkey.default_topic]
         self.agent_cfg = self.powder.get("agent", {})
+        self.safety = safety.resolve(self.powder.get("safety", {}))
         self.db = sqlite3.connect(self.folder / "history.db")
         self.db.execute("""CREATE TABLE IF NOT EXISTS messages (
             id TEXT PRIMARY KEY, pubkey TEXT, name TEXT, topic TEXT, content TEXT,
@@ -289,8 +383,9 @@ class Hearth:
         root, reply_to = self.thread_of(ev)
         msg = {
             "id": ev["id"], "pubkey": ev["pubkey"],
-            "name": str(nostr.tag_value(ev, "name") or "anon")[:40],
-            "topic": self._topic_of(ev), "content": ev["content"],
+            # names can't carry newlines, brackets or invisible characters (they'd spoof speakers in prompts)
+            "name": (_NAME_UNSAFE.sub("", str(nostr.tag_value(ev, "name") or "")).strip() or "anon")[:40],
+            "topic": self._topic_of(ev), "content": _CONTROL.sub("", ev["content"]),  # raw keeps the original
             "created_at": ev["created_at"], "reply_to": reply_to,
             "mine": int(ev["pubkey"] == self.pubkey), "root": root,
             "status": status, "raw": json.dumps(ev, ensure_ascii=False),
@@ -331,9 +426,14 @@ class Hearth:
         self._set_status(ev["id"], status)
         return status, results
 
-    async def post(self, topic, content, reply_to=None):
+    async def post(self, topic, content, reply_to=None, force=False):
         """Sign and send a message. The signed event is saved first, so a failed send can be retried.
-        Returns (message, {chimney: (accepted, note)}). Raises ConnectionError if no chimney accepted it."""
+        Returns (message, {chimney: (accepted, note)}). Raises ConnectionError if no chimney accepted it,
+        and PostBlocked if the outbound filter is on and objects (force=True skips the filter)."""
+        if self.safety["outbound_filter"] and not force:
+            reasons = safety.check_outbound(content, private_key=self.private_key)
+            if reasons:
+                raise PostBlocked("; ".join(reasons))
         tags = [["t", self.portkey.topic_tag(topic)], ["name", self.name],
                 ["client", "floo-network"], ["floo", PROTOCOL_VERSION]]
         if reply_to:
@@ -353,9 +453,19 @@ class Hearth:
                                "('pending','unconfirmed','failed') ORDER BY created_at").fetchall()
         return [json.loads(r[0]) for r in rows if r[0]]
 
-    async def retry(self):
-        """Resend undelivered messages (same signed events, so chimneys can't double-post them)."""
-        return [(ev, *(await self._send(ev))) for ev in self.outbox()]
+    async def retry(self, force=False):
+        """Resend undelivered messages (same signed events, so chimneys can't double-post them).
+        Each is re-checked against the current safety settings first; blocked ones stay in the outbox.
+        Returns [(event, status, chimney results)], status 'blocked: <reasons>' for those held back."""
+        results = []
+        for ev in self.outbox():
+            if self.safety["outbound_filter"] and not force:
+                reasons = safety.check_outbound(ev["content"], private_key=self.private_key)
+                if reasons:
+                    results.append((ev, "blocked: " + "; ".join(reasons), {}))
+                    continue
+            results.append((ev, *(await self._send(ev))))
+        return results
 
     # ---------- fetching ----------
 

@@ -27,4 +27,4 @@ floo = "floo.cli:main"
 packages = ["floo"]
 
 [tool.setuptools.package-data]
-floo = ["portkey.json"]
+floo = ["portkey.json", "bip39_english.txt"]
