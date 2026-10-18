@@ -81,11 +81,10 @@
       <stop offset="0.6" stop-color="#3a2416"/>
       <stop offset="1" stop-color="#1c110a"/>
     </linearGradient>
-    <radialGradient id="logEnd" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#d8f7c8"/>
-      <stop offset="0.35" stop-color="#5fe08a"/>
-      <stop offset="0.7" stop-color="#2b3a1f"/>
-      <stop offset="1" stop-color="#1a120b"/>
+    <radialGradient id="logRim" cx="0.5" cy="0" r="0.75" gradientTransform="translate(0.125 0) scale(0.75 1)">
+      <stop offset="0" stop-color="#3dff7f" stop-opacity="0.45"/>
+      <stop offset="0.5" stop-color="#2bd866" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#2bd866" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="flameOuter" x1="0" y1="1" x2="0" y2="0">
       <stop offset="0" stop-color="#05692c"/>
@@ -696,8 +695,11 @@
     <rect x="566" y="388" width="150" height="17" rx="8.5" fill="url(#logWood)" transform="rotate(-5 640 396)"/>
     <rect x="548" y="397" width="170" height="16" rx="8" fill="url(#logWood)" transform="rotate(3 640 405)"/>
   </g>
-  <ellipse cx="713" cy="389" rx="5" ry="8.5" fill="url(#logEnd)" transform="rotate(-5 640 396)"/>
-  <ellipse cx="552" cy="405" rx="5" ry="8" fill="url(#logEnd)" transform="rotate(3 640 405)"/>
+  <!-- green firelight catching the tops of the logs -->
+  <g class="glow add">
+    <rect x="566" y="388" width="150" height="17" rx="8.5" fill="url(#logRim)" transform="rotate(-5 640 396)"/>
+    <rect x="548" y="397" width="170" height="16" rx="8" fill="url(#logRim)" transform="rotate(3 640 405)"/>
+  </g>
 
   <!-- sparks -->
   <g fill="#b5ffd0" class="add">
